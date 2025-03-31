@@ -22,10 +22,12 @@ export const AppState: React.FC = () => {
   React.useEffect(() => {
     window.electronAPI.invoke("isDarkMode").then((isDark: boolean) => {
       store.updateTheme(isDark ? "dark" : "light");
+      document.documentElement.classList.toggle("dark", isDark);
     });
 
     window.electronAPI.on("theme-updated", (event, isDark: boolean) => {
       store.updateTheme(isDark ? "dark" : "light");
+      document.documentElement.classList.toggle("dark", isDark);
     });
   }, []);
 
