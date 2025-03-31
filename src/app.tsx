@@ -1,9 +1,9 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AppProvider, useAppContext } from "./context";
+import { AppState, useStore } from "./state";
 
 const App: React.FC = () => {
-  const { theme } = useAppContext();
+  const theme = useStore((state) => state.theme);
 
   return (
     <div className="flex flex-col h-screen">
@@ -47,7 +47,8 @@ const App: React.FC = () => {
 
 const root = createRoot(document.body);
 root.render(
-  <AppProvider>
+  <>
     <App />
-  </AppProvider>
+    <AppState />
+  </>
 );
