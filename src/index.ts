@@ -177,4 +177,29 @@ app.whenReady().then(() => {
       return { success: false, error: e.message };
     }
   });
+
+  // Preferences handlers
+  ipcMain.handle("get-preferences", async () => {
+    const userData = app.getPath("userData");
+    const prefsDir = path.join(userData, "kettle-panels");
+    const prefsPath = path.join(prefsDir, "preferences.json");
+    let prefs = { autoRotateInterval: 0 };
+    if (fs.existsSync(prefsPath)) {
+      try {
+        prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8"));
+      } catch (e) {
+        prefs = { autoRotateInterval: 0 };
+      }
+    }
+    return prefs;
+  });
+
+  ipcMain.handle("set-preferences", async (_event, prefs) => {
+    const userData = app.getPath("userData");
+    const prefsDir = path.join(userData, "kettle-panels");
+    fs.mkdirSync(prefsDir, { recursive: true });
+    const prefsPath = path.join(prefsDir, "preferences.json");
+    fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
+    return { success: true };
+  });
 });
