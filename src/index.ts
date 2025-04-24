@@ -168,17 +168,108 @@ app.whenReady().then(() => {
     return { photos };
   });
 
-  ipcMain.handle("set-wallpaper", async (_event, { guid }) => {
+  // --- Generated Image Management ---
+  const GENERATED_DIR = "generated";
+  const GENERATED_MAPPING = "mapping.json";
+  const DEFAULT_STYLE = "default";
+
+  // Use environment variable for API URL, fallback to sensible defaults
+  const isDev = process.env.NODE_ENV === "development";
+  const API_URL =
+    process.env.API_URL ||
+    (isDev ? "http://localhost:8000" : "https://your-production-api.com");
+
+  function getGeneratedDir() {
+    const userData = app.getPath("userData");
+    const genDir = path.join(userData, "kettle-panels", GENERATED_DIR);
+    fs.mkdirSync(genDir, { recursive: true });
+    return genDir;
+  }
+
+  function getGeneratedMappingPath() {
+    return path.join(getGeneratedDir(), GENERATED_MAPPING);
+  }
+
+  function readGeneratedMapping() {
+    const mappingPath = getGeneratedMappingPath();
+    if (fs.existsSync(mappingPath)) {
+      try {
+        return JSON.parse(fs.readFileSync(mappingPath, "utf-8"));
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  function writeGeneratedMapping(mapping: any) {
+    const mappingPath = getGeneratedMappingPath();
+    fs.writeFileSync(mappingPath, JSON.stringify(mapping, null, 2));
+  }
+
+  async function fetchAndStoreGeneratedImage(
+    guid: string,
+    style: string = DEFAULT_STYLE
+  ): Promise<string> {
+    // Read the original image as base64
     const userData = app.getPath("userData");
     const photosDir = path.join(userData, "kettle-panels", "photos");
-    const filePath = path.join(photosDir, guid);
-    try {
-      await setWallpaper(filePath, { screen: "all" });
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: e.message };
+    const originalFilePath = path.join(photosDir, guid);
+    if (!fs.existsSync(originalFilePath))
+      throw new Error("Original image not found");
+    const buffer = fs.readFileSync(originalFilePath);
+    const base64 = buffer.toString("base64");
+    // POST to FastAPI
+    const apiUrl = `${API_URL}/image-gen`;
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, style }),
+    });
+    if (!res.ok) throw new Error("Failed to fetch generated image from API");
+    const json = await res.json();
+    const generatedBase64 = json.image;
+    if (!generatedBase64) throw new Error("No image returned from API");
+    const genDir = getGeneratedDir();
+    const genFileName = `${guid}_${style}`;
+    const genFilePath = path.join(genDir, genFileName);
+    fs.writeFileSync(genFilePath, Buffer.from(generatedBase64, "base64"));
+    // Update mapping
+    const mapping = readGeneratedMapping();
+    if (!mapping[guid]) mapping[guid] = {};
+    mapping[guid][style] = genFileName;
+    writeGeneratedMapping(mapping);
+    return genFilePath;
+  }
+
+  function getGeneratedImagePath(
+    guid: string,
+    style: string = DEFAULT_STYLE
+  ): string | null {
+    const mapping = readGeneratedMapping();
+    if (mapping[guid] && mapping[guid][style]) {
+      const genDir = getGeneratedDir();
+      const genFilePath = path.join(genDir, mapping[guid][style]);
+      if (fs.existsSync(genFilePath)) return genFilePath;
     }
-  });
+    return null;
+  }
+
+  ipcMain.handle(
+    "set-wallpaper",
+    async (_event, { guid, style = DEFAULT_STYLE }) => {
+      try {
+        let genFilePath = getGeneratedImagePath(guid, style);
+        if (!genFilePath) {
+          genFilePath = await fetchAndStoreGeneratedImage(guid, style);
+        }
+        await setWallpaper(genFilePath, { screen: "all" });
+        return { success: true };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    }
+  );
 
   // Preferences handlers
   ipcMain.handle("get-preferences", async () => {
@@ -262,11 +353,16 @@ app.whenReady().then(() => {
     let available = photos.filter((g) => g !== lastKnownGuid);
     if (available.length === 0) available = photos;
     const nextGuid = available[Math.floor(Math.random() * available.length)];
-    const userData = app.getPath("userData");
-    const photosDir = path.join(userData, "kettle-panels", "photos");
-    const filePath = path.join(photosDir, nextGuid);
     try {
-      await setWallpaper(filePath, { screen: "all" });
+      // Use generated image (fetch/cached)
+      let genFilePath = getGeneratedImagePath(nextGuid, DEFAULT_STYLE);
+      if (!genFilePath) {
+        genFilePath = await fetchAndStoreGeneratedImage(
+          nextGuid,
+          DEFAULT_STYLE
+        );
+      }
+      await setWallpaper(genFilePath, { screen: "all" });
       lastKnownGuid = nextGuid;
       setPreferences({ ...prefs, lastWallpaperChange: now });
     } catch (e) {
