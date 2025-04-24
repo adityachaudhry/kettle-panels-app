@@ -374,6 +374,55 @@ app.whenReady().then(() => {
     return { success: true };
   });
 
+  // --- Thumbnails Management ---
+  const getThumbnailsPath = () => {
+    const userData = app.getPath("userData");
+    const thumbsDir = path.join(userData, "kettle-panels");
+    fs.mkdirSync(thumbsDir, { recursive: true });
+    return path.join(thumbsDir, "thumbnails.json");
+  };
+
+  function readThumbnails() {
+    const thumbsPath = getThumbnailsPath();
+    if (fs.existsSync(thumbsPath)) {
+      try {
+        return JSON.parse(fs.readFileSync(thumbsPath, "utf-8"));
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  function writeThumbnails(mapping: Record<string, string | null>) {
+    const thumbsPath = getThumbnailsPath();
+    fs.writeFileSync(thumbsPath, JSON.stringify(mapping, null, 2));
+  }
+
+  ipcMain.handle("save-thumbnails", async (_event, { thumbnails }) => {
+    // thumbnails: Array<{ guid: string, thumbnail: string }>
+    const mapping = readThumbnails();
+    for (const t of thumbnails) {
+      mapping[t.guid] = t.thumbnail;
+    }
+    writeThumbnails(mapping);
+    return { success: true };
+  });
+
+  ipcMain.handle("get-thumbnails", async () => {
+    const mapping = readThumbnails();
+    return { thumbnails: mapping };
+  });
+
+  ipcMain.handle("delete-thumbnail", async (_event, { guid }) => {
+    const mapping = readThumbnails();
+    if (mapping[guid]) {
+      delete mapping[guid];
+      writeThumbnails(mapping);
+    }
+    return { success: true };
+  });
+
   // --- Wallpaper Auto-Rotation Logic (Main Process) ---
   let autoRotateTimer: NodeJS.Timeout | null = null;
   let lastKnownGuid: string | null = null;

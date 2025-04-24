@@ -25,6 +25,9 @@ const Main: React.FC = () => {
     Record<string, string | null>
   >({}); // guid -> wallpaper dataUrl/null
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [thumbnails, setThumbnails] = React.useState<
+    Record<string, string | null>
+  >({}); // guid -> thumbnail dataUrl/null
 
   React.useEffect(() => {
     const loadPhotos = async () => {
@@ -32,6 +35,38 @@ const Main: React.FC = () => {
         const result = await window.electronAPI.invoke("get-photos");
         if (result && Array.isArray(result.photos)) {
           setPhotos(result.photos);
+        }
+        // Load thumbnails mapping
+        const thumbResult = await window.electronAPI.invoke("get-thumbnails");
+        const loadedThumbnails =
+          thumbResult && thumbResult.thumbnails ? thumbResult.thumbnails : {};
+        setThumbnails(loadedThumbnails);
+
+        // Generate missing thumbnails for photos that don't have them
+        if (result && Array.isArray(result.photos)) {
+          const missing = result.photos.filter(
+            (p: any) => !loadedThumbnails[p.guid]
+          );
+          if (missing.length > 0) {
+            const thumbPairs = await Promise.all(
+              missing.map(async (p: any) => {
+                const thumb = await generateThumbnail(p.url);
+                return { guid: p.guid, thumbnail: thumb };
+              })
+            );
+            // Save to backend
+            await window.electronAPI.invoke("save-thumbnails", {
+              thumbnails: thumbPairs,
+            });
+            // Update state
+            setThumbnails((prev) => {
+              const next = { ...prev };
+              thumbPairs.forEach(({ guid, thumbnail }) => {
+                next[guid] = thumbnail;
+              });
+              return next;
+            });
+          }
         }
       }
     };
@@ -77,6 +112,28 @@ const Main: React.FC = () => {
 
   // --- Removed auto-rotate timer logic. Now handled in main process. ---
 
+  // Helper to generate a thumbnail from a dataUrl
+  const generateThumbnail = (
+    dataUrl: string,
+    maxSize = 320
+  ): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.src = dataUrl;
+    });
+  };
+
   const handleFilesSelect = (files: File[]) => {
     const readers = files.map((file) => {
       return new Promise<{ url: string; name: string; guid: string }>(
@@ -91,10 +148,25 @@ const Main: React.FC = () => {
       );
     });
     Promise.all(readers).then(async (fileObjs) => {
+      // Generate thumbnails for each photo
+      const thumbPairs = await Promise.all(
+        fileObjs.map(async (f) => {
+          const thumb = await generateThumbnail(f.url);
+          return { guid: f.guid, thumbnail: thumb };
+        })
+      );
+      // Update state
       setPhotos((prev) => [
         ...prev,
         ...fileObjs.map((f) => ({ url: f.url, guid: f.guid })),
       ]);
+      setThumbnails((prev) => {
+        const next = { ...prev };
+        thumbPairs.forEach(({ guid, thumbnail }) => {
+          next[guid] = thumbnail;
+        });
+        return next;
+      });
       // Save to userData/kettle-panels/photos via main process
       if (window.electronAPI?.invoke) {
         await window.electronAPI.invoke("save-photos", {
@@ -104,6 +176,10 @@ const Main: React.FC = () => {
             dataUrl: f.url,
           })),
         });
+        // Save thumbnails
+        await window.electronAPI.invoke("save-thumbnails", {
+          thumbnails: thumbPairs,
+        });
       }
     });
   };
@@ -111,8 +187,14 @@ const Main: React.FC = () => {
   const handleDeletePhoto = async (index: number) => {
     const photo = photos[index];
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setThumbnails((prev) => {
+      const next = { ...prev };
+      delete next[photo.guid];
+      return next;
+    });
     if (window.electronAPI?.invoke) {
       await window.electronAPI.invoke("delete-photo", { guid: photo.guid });
+      await window.electronAPI.invoke("delete-thumbnail", { guid: photo.guid });
     }
     // If all photos are deleted, reset lastWallpaperChange
     if (photos.length - 1 === 0) {
@@ -212,7 +294,7 @@ const Main: React.FC = () => {
           </div>
           <div className="flex flex-1 overflow-auto w-full">
             <PhotoGrid
-              photos={photos.map((p) => p.url)}
+              photos={photos.map((p) => thumbnails[p.guid] || p.url)}
               onDelete={handleDeletePhoto}
               onPhotoClick={setSelectedPhotoIndex}
             />
