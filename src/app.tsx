@@ -8,9 +8,10 @@ import Main from "../components/Main";
 const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen">
-      <TitleBar />
-      <div className="flex flex-1">
-        <Sidebar />
+      <div className="sticky top-0 z-10">
+        <TitleBar />
+      </div>
+      <div className="flex flex-1 overflow-auto">
         <Main />
       </div>
     </div>

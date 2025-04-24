@@ -12,7 +12,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
   onPhotoClick,
 }) => {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full max-w-2xl mt-8">
+    <div className="grid grid-cols-4 gap-2 w-full max-w-2xl mt-8">
       {photos.map((src, idx) => (
         <div
           key={idx}
