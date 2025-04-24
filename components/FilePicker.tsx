@@ -13,7 +13,7 @@ const FilePicker: React.FC<{ onFilesSelect: (files: File[]) => void }> = ({
     }
   };
   return (
-    <label className="inline-flex items-center px-3 py-1 dark:bg-[#656564] dark:text-[#E1E1E1] rounded-md border dark:border-t-[#777776] dark:border-b-[#292929] dark:border-r-0 dark:border-l-0 cursor-pointer text-sm">
+    <label className="inline-flex items-center px-3 py-1 dark:bg-[#656564] dark:text-[#E1E1E1] rounded-md border dark:border-t-[#777776] dark:border-b-[#292929] dark:border-r-0 dark:border-l-0 text-sm">
       Import Photos
       <input
         type="file"

@@ -19,10 +19,14 @@ const Main: React.FC = () => {
     });
   };
 
+  const handleDeletePhoto = (index: number) => {
+    setPhotoURLs((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <div className="flex-1 p-4 flex flex-col items-center justify-center bg-[#F0F0F0] dark:bg-[#2F2F2F] border-[#E5E5E5] dark:border-[#0F0F0F]">
       <FilePicker onFilesSelect={handleFilesSelect} />
-      <PhotoGrid photos={photoURLs} />
+      <PhotoGrid photos={photoURLs} onDelete={handleDeletePhoto} />
       {/* Main content */}
     </div>
   );
