@@ -148,18 +148,20 @@ app.whenReady().then(() => {
         metadata = {};
       }
     }
-    const photos = Object.keys(metadata).map((guid) => {
-      const filePath = path.join(photosDir, guid);
-      if (fs.existsSync(filePath)) {
-        const buffer = fs.readFileSync(filePath);
-        const base64 = buffer.toString("base64");
-        return {
-          url: `data:image/*;base64,${base64}`,
-          guid,
-        };
-      }
-      return null;
-    }).filter(Boolean);
+    const photos = Object.keys(metadata)
+      .map((guid) => {
+        const filePath = path.join(photosDir, guid);
+        if (fs.existsSync(filePath)) {
+          const buffer = fs.readFileSync(filePath);
+          const base64 = buffer.toString("base64");
+          return {
+            url: `data:image/*;base64,${base64}`,
+            guid,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
     return { photos };
   });
 });
