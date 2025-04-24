@@ -10,6 +10,9 @@ interface PhotoItem {
 
 const Main: React.FC = () => {
   const [photos, setPhotos] = React.useState<PhotoItem[]>([]);
+  const [currentWallpaperGuid, setCurrentWallpaperGuid] = React.useState<
+    string | null
+  >(null);
 
   React.useEffect(() => {
     const loadPhotos = async () => {
@@ -21,6 +24,9 @@ const Main: React.FC = () => {
       }
     };
     loadPhotos();
+    // Optionally, on cold start, try to detect the current wallpaper and match to a guid
+    // For now, just reset on load
+    setCurrentWallpaperGuid(null);
   }, []);
 
   const handleFilesSelect = (files: File[]) => {
@@ -62,12 +68,26 @@ const Main: React.FC = () => {
     }
   };
 
+  const handleSetWallpaper = async (index: number) => {
+    const photo = photos[index];
+    if (photo.guid === currentWallpaperGuid) return; // Already set
+    if (window.electronAPI?.invoke) {
+      const result = await window.electronAPI.invoke("set-wallpaper", {
+        guid: photo.guid,
+      });
+      if (result && result.success) {
+        setCurrentWallpaperGuid(photo.guid);
+      }
+    }
+  };
+
   return (
     <div className="flex-1 p-4 flex flex-col items-center justify-center bg-[#F0F0F0] dark:bg-[#2F2F2F] border-[#E5E5E5] dark:border-[#0F0F0F]">
       <FilePicker onFilesSelect={handleFilesSelect} />
       <PhotoGrid
         photos={photos.map((p) => p.url)}
         onDelete={handleDeletePhoto}
+        onPhotoClick={handleSetWallpaper}
       />
       {/* Main content */}
     </div>
