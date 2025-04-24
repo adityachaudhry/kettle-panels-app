@@ -12,10 +12,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
   onPhotoClick,
 }) => {
   return (
-    <div className="w-full mt-6">
-      <div className="text-xs p-2 text-black dark:text-[#DFDFDF]">
-        Your Photos
-      </div>
+    <div className="w-full">
       <div className="grid grid-cols-4 gap-2">
         {photos.map((src, idx) => (
           <div

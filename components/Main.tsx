@@ -126,14 +126,18 @@ const Main: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 pl-4 pr-4 flex flex-col items-center bg-[#F0F0F0] dark:bg-[#2F2F2F] gap-2">
+    <div className="flex-1 pl-4 pr-4 flex flex-col items-center bg-[#F0F0F0] dark:bg-[#2F2F2F]">
       <div className="sticky top-0 z-10 w-full">
         <Settings
           autoRotateInterval={autoRotateInterval}
           onAutoRotateIntervalChange={setAutoRotateInterval}
           onFilesSelect={handleFilesSelect}
         />
+        <div className="text-xs p-2 text-black dark:text-[#DFDFDF] mt-6">
+          Your Photos
+        </div>
       </div>
+
       <div className="flex flex-1 overflow-auto">
         <PhotoGrid
           photos={photos.map((p) => p.url)}
