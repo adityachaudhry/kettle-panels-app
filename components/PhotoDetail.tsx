@@ -28,7 +28,9 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setError(null);
     try {
       if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("delete-photo", { guid: photo.guid });
+        const result = await window.electronAPI.invoke("delete-photo", {
+          guid: photo.guid,
+        });
         if (!result.success) throw new Error(result.error || "Delete failed");
         onBack();
       }
@@ -44,8 +46,12 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setError(null);
     try {
       if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("set-wallpaper", { guid: photo.guid, resetCountdown: true });
-        if (!result.success) throw new Error(result.error || "Set wallpaper failed");
+        const result = await window.electronAPI.invoke("set-wallpaper", {
+          guid: photo.guid,
+          resetCountdown: true,
+        });
+        if (!result.success)
+          throw new Error(result.error || "Set wallpaper failed");
       }
     } catch (e: any) {
       setError(e.message);
@@ -59,8 +65,11 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setError(null);
     try {
       if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("regenerate-wallpaper", { guid: photo.guid });
-        if (!result.success) throw new Error(result.error || "Regenerate failed");
+        const result = await window.electronAPI.invoke("regenerate-wallpaper", {
+          guid: photo.guid,
+        });
+        if (!result.success)
+          throw new Error(result.error || "Regenerate failed");
         // Optionally update UI with new wallpaper
         window.location.reload(); // crude, but ensures UI updates
       }
@@ -76,7 +85,9 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setError(null);
     try {
       if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("download-wallpaper", { guid: photo.guid });
+        const result = await window.electronAPI.invoke("download-wallpaper", {
+          guid: photo.guid,
+        });
         if (!result.success) throw new Error(result.error || "Download failed");
         // Optionally show a toast or notification
       }
@@ -152,14 +163,24 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           onClick={handleSetWallpaper}
           disabled={currentWallpaperGuid === photo.guid || !!actionLoading}
         >
-          {currentWallpaperGuid === photo.guid ? "Already Set" : actionLoading === "set" ? "Setting..." : "Set as Wallpaper"}
+          {currentWallpaperGuid === photo.guid
+            ? "Already Set"
+            : actionLoading === "set"
+            ? "Setting..."
+            : "Set as Wallpaper"}
         </button>
         <button
           className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           onClick={handleRegenerate}
           disabled={!!actionLoading}
         >
-          {wallpaper ? (actionLoading === "regen" ? "Regenerating..." : "Regenerate Wallpaper") : (actionLoading === "regen" ? "Generating..." : "Generate Wallpaper")}
+          {wallpaper
+            ? actionLoading === "regen"
+              ? "Regenerating..."
+              : "Regenerate Wallpaper"
+            : actionLoading === "regen"
+            ? "Generating..."
+            : "Generate Wallpaper"}
         </button>
         <button
           className="px-3 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 disabled:opacity-50"

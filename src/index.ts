@@ -306,41 +306,47 @@ app.whenReady().then(() => {
   );
 
   // Download wallpaper as PNG to Downloads
-  ipcMain.handle("download-wallpaper", async (_event, { guid, style = DEFAULT_STYLE }) => {
-    try {
-      const genFilePath = getGeneratedImagePath(guid, style);
-      if (!genFilePath) throw new Error("No generated wallpaper found");
-      const downloadsDir = app.getPath("downloads");
-      const outPath = path.join(downloadsDir, `${guid}_wallpaper.png`);
-      fs.copyFileSync(genFilePath, outPath);
-      return { success: true, path: outPath };
-    } catch (e) {
-      return { success: false, error: e.message };
+  ipcMain.handle(
+    "download-wallpaper",
+    async (_event, { guid, style = DEFAULT_STYLE }) => {
+      try {
+        const genFilePath = getGeneratedImagePath(guid, style);
+        if (!genFilePath) throw new Error("No generated wallpaper found");
+        const downloadsDir = app.getPath("downloads");
+        const outPath = path.join(downloadsDir, `${guid}_wallpaper.png`);
+        fs.copyFileSync(genFilePath, outPath);
+        return { success: true, path: outPath };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
     }
-  });
+  );
 
   // Regenerate wallpaper (delete old, generate new, update mapping)
-  ipcMain.handle("regenerate-wallpaper", async (_event, { guid, style = DEFAULT_STYLE }) => {
-    try {
-      // Delete old generated wallpaper if exists
-      const mapping = readGeneratedMapping();
-      const genDir = getGeneratedDir();
-      if (mapping[guid] && mapping[guid][style]) {
-        const oldFile = path.join(genDir, mapping[guid][style]);
-        if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
-        delete mapping[guid][style];
-        if (Object.keys(mapping[guid]).length === 0) delete mapping[guid];
-        writeGeneratedMapping(mapping);
+  ipcMain.handle(
+    "regenerate-wallpaper",
+    async (_event, { guid, style = DEFAULT_STYLE }) => {
+      try {
+        // Delete old generated wallpaper if exists
+        const mapping = readGeneratedMapping();
+        const genDir = getGeneratedDir();
+        if (mapping[guid] && mapping[guid][style]) {
+          const oldFile = path.join(genDir, mapping[guid][style]);
+          if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+          delete mapping[guid][style];
+          if (Object.keys(mapping[guid]).length === 0) delete mapping[guid];
+          writeGeneratedMapping(mapping);
+        }
+        // Generate new
+        const genFilePath = await fetchAndStoreGeneratedImage(guid, style);
+        const buffer = fs.readFileSync(genFilePath);
+        const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+        return { success: true, wallpaper: dataUrl };
+      } catch (e) {
+        return { success: false, error: e.message };
       }
-      // Generate new
-      const genFilePath = await fetchAndStoreGeneratedImage(guid, style);
-      const buffer = fs.readFileSync(genFilePath);
-      const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
-      return { success: true, wallpaper: dataUrl };
-    } catch (e) {
-      return { success: false, error: e.message };
     }
-  });
+  );
 
   // Preferences handlers
   ipcMain.handle("get-preferences", async () => {
