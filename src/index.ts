@@ -133,6 +133,17 @@ app.whenReady().then(() => {
         delete metadata[guid];
         fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
       }
+      // Delete generated wallpapers and mapping
+      const mapping = readGeneratedMapping();
+      const genDir = getGeneratedDir();
+      if (mapping[guid]) {
+        Object.values(mapping[guid]).forEach((fileName: any) => {
+          const genFilePath = path.join(genDir, fileName);
+          if (fs.existsSync(genFilePath)) fs.unlinkSync(genFilePath);
+        });
+        delete mapping[guid];
+        writeGeneratedMapping(mapping);
+      }
       scheduleAutoRotate();
       return { success: true };
     } catch (e) {
@@ -258,19 +269,78 @@ app.whenReady().then(() => {
 
   ipcMain.handle(
     "set-wallpaper",
-    async (_event, { guid, style = DEFAULT_STYLE }) => {
+    async (_event, { guid, style = DEFAULT_STYLE, resetCountdown = false }) => {
       try {
         let genFilePath = getGeneratedImagePath(guid, style);
         if (!genFilePath) {
           genFilePath = await fetchAndStoreGeneratedImage(guid, style);
         }
         await setWallpaper(genFilePath, { screen: "all" });
+        if (resetCountdown) {
+          const prefs = getPreferences();
+          setPreferences({ ...prefs, lastWallpaperChange: Date.now() });
+          scheduleAutoRotate();
+        }
         return { success: true };
       } catch (e) {
         return { success: false, error: e.message };
       }
     }
   );
+
+  // Handler to get generated wallpaper as data URL
+  ipcMain.handle(
+    "get-wallpaper",
+    async (_event, { guid, style = DEFAULT_STYLE }) => {
+      try {
+        const genFilePath = getGeneratedImagePath(guid, style);
+        if (!genFilePath) return { wallpaper: null };
+        const buffer = fs.readFileSync(genFilePath);
+        // You may want to detect the image type, but assuming PNG for now
+        const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+        return { wallpaper: dataUrl };
+      } catch (e) {
+        return { wallpaper: null, error: e.message };
+      }
+    }
+  );
+
+  // Download wallpaper as PNG to Downloads
+  ipcMain.handle("download-wallpaper", async (_event, { guid, style = DEFAULT_STYLE }) => {
+    try {
+      const genFilePath = getGeneratedImagePath(guid, style);
+      if (!genFilePath) throw new Error("No generated wallpaper found");
+      const downloadsDir = app.getPath("downloads");
+      const outPath = path.join(downloadsDir, `${guid}_wallpaper.png`);
+      fs.copyFileSync(genFilePath, outPath);
+      return { success: true, path: outPath };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Regenerate wallpaper (delete old, generate new, update mapping)
+  ipcMain.handle("regenerate-wallpaper", async (_event, { guid, style = DEFAULT_STYLE }) => {
+    try {
+      // Delete old generated wallpaper if exists
+      const mapping = readGeneratedMapping();
+      const genDir = getGeneratedDir();
+      if (mapping[guid] && mapping[guid][style]) {
+        const oldFile = path.join(genDir, mapping[guid][style]);
+        if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+        delete mapping[guid][style];
+        if (Object.keys(mapping[guid]).length === 0) delete mapping[guid];
+        writeGeneratedMapping(mapping);
+      }
+      // Generate new
+      const genFilePath = await fetchAndStoreGeneratedImage(guid, style);
+      const buffer = fs.readFileSync(genFilePath);
+      const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+      return { success: true, wallpaper: dataUrl };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
 
   // Preferences handlers
   ipcMain.handle("get-preferences", async () => {

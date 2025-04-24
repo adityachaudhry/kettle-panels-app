@@ -1,6 +1,7 @@
 import React from "react";
 import PhotoGrid from "./PhotoGrid";
 import Settings from "./Settings";
+import PhotoDetail from "./PhotoDetail";
 import { v4 as uuidv4 } from "uuid";
 
 interface PhotoItem {
@@ -17,6 +18,13 @@ const Main: React.FC = () => {
   const [lastWallpaperChange, setLastWallpaperChange] = React.useState<
     number | null
   >(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = React.useState<
+    number | null
+  >(null);
+  const [wallpapers, setWallpapers] = React.useState<
+    Record<string, string | null>
+  >({}); // guid -> wallpaper dataUrl/null
+  const [isGenerating, setIsGenerating] = React.useState(false);
 
   React.useEffect(() => {
     const loadPhotos = async () => {
@@ -125,26 +133,92 @@ const Main: React.FC = () => {
     }
   };
 
-  return (
-    <div className="flex-1 pl-4 pr-4 flex flex-col items-center bg-[#F0F0F0] dark:bg-[#2F2F2F]">
-      <div className="sticky top-0 z-10 w-full">
-        <Settings
-          autoRotateInterval={autoRotateInterval}
-          onAutoRotateIntervalChange={setAutoRotateInterval}
-          onFilesSelect={handleFilesSelect}
-        />
-        <div className="text-xs p-2 text-black dark:text-[#DFDFDF] mt-6">
-          Your Photos
-        </div>
-      </div>
+  // Fetch generated wallpaper for a photo (stub: checks local state, could call backend)
+  const fetchWallpaper = async (guid: string) => {
+    if (wallpapers[guid]) return wallpapers[guid];
+    if (window.electronAPI?.invoke) {
+      const result = await window.electronAPI.invoke("get-wallpaper", { guid });
+      if (result && result.wallpaper) {
+        setWallpapers((prev) => ({ ...prev, [guid]: result.wallpaper }));
+        return result.wallpaper;
+      }
+    }
+    return null;
+  };
 
-      <div className="flex flex-1 overflow-auto">
-        <PhotoGrid
-          photos={photos.map((p) => p.url)}
-          onDelete={handleDeletePhoto}
-          onPhotoClick={handleSetWallpaper}
+  // Generate wallpaper for a photo
+  const handleGenerateWallpaper = async (guid: string) => {
+    setIsGenerating(true);
+    if (window.electronAPI?.invoke) {
+      const result = await window.electronAPI.invoke("generate-wallpaper", {
+        guid,
+        style: "default",
+      });
+      if (result && result.wallpaper) {
+        setWallpapers((prev) => ({ ...prev, [guid]: result.wallpaper }));
+      }
+    }
+    setIsGenerating(false);
+  };
+
+  // Set wallpaper and reset countdown
+  const handleSetWallpaperImmediate = async (guid: string) => {
+    if (guid === currentWallpaperGuid) return;
+    if (window.electronAPI?.invoke) {
+      const result = await window.electronAPI.invoke("set-wallpaper", {
+        guid,
+        resetCountdown: true,
+      });
+      if (result && result.success) {
+        setCurrentWallpaperGuid(guid);
+        setLastWallpaperChange(Date.now());
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    // When L2 view is opened, fetch the wallpaper if not already loaded
+    if (selectedPhotoIndex !== null && photos[selectedPhotoIndex]) {
+      const guid = photos[selectedPhotoIndex].guid;
+      if (!wallpapers[guid]) {
+        fetchWallpaper(guid);
+      }
+    }
+  }, [selectedPhotoIndex]);
+
+  return (
+    <div className="flex-1 pl-4 pr-4 flex flex-col items-center bg-[#F0F0F0] dark:bg-[#2F2F2F] min-h-screen">
+      {selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? (
+        <PhotoDetail
+          photo={photos[selectedPhotoIndex]}
+          wallpaper={wallpapers[photos[selectedPhotoIndex].guid] || null}
+          isGenerating={isGenerating}
+          currentWallpaperGuid={currentWallpaperGuid}
+          onBack={() => setSelectedPhotoIndex(null)}
+          onGenerateWallpaper={handleGenerateWallpaper}
+          onSetWallpaperImmediate={handleSetWallpaperImmediate}
         />
-      </div>
+      ) : (
+        <>
+          <div className="sticky top-0 z-10 w-full">
+            <Settings
+              autoRotateInterval={autoRotateInterval}
+              onAutoRotateIntervalChange={setAutoRotateInterval}
+              onFilesSelect={handleFilesSelect}
+            />
+            <div className="text-xs p-2 text-black dark:text-[#DFDFDF] mt-6">
+              Your Photos
+            </div>
+          </div>
+          <div className="flex flex-1 overflow-auto w-full">
+            <PhotoGrid
+              photos={photos.map((p) => p.url)}
+              onDelete={handleDeletePhoto}
+              onPhotoClick={setSelectedPhotoIndex}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };
