@@ -208,8 +208,6 @@ app.whenReady().then(() => {
 
   // --- Wallpaper Auto-Rotation Logic (Main Process) ---
   let autoRotateTimer: NodeJS.Timeout | null = null;
-  let lastKnownInterval = 0;
-  let lastKnownPhotos: string[] = [];
   let lastKnownGuid: string | null = null;
 
   function getPhotosList(): string[] {
@@ -257,7 +255,6 @@ app.whenReady().then(() => {
     const photos = getPhotosList();
     if (photos.length < 2) return;
     const prefs = getPreferences();
-    const lastChange = prefs.lastWallpaperChange || 0;
     const now = Date.now();
     const interval = prefs.autoRotateInterval;
     if (interval <= 0) return;
