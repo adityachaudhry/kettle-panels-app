@@ -1,20 +1,12 @@
 import React from "react";
-import FilePicker from "./FilePicker";
 import PhotoGrid from "./PhotoGrid";
+import Settings from "./Settings";
 import { v4 as uuidv4 } from "uuid";
 
 interface PhotoItem {
   url: string;
   guid: string;
 }
-
-const intervalOptions = [
-  { label: "Off", value: 0 },
-  { label: "Every Minute", value: 60 * 1000 },
-  { label: "Every Hour", value: 60 * 60 * 1000 },
-  { label: "Every Day", value: 24 * 60 * 60 * 1000 },
-  { label: "Every Week", value: 7 * 24 * 60 * 60 * 1000 },
-];
 
 const Main: React.FC = () => {
   const [photos, setPhotos] = React.useState<PhotoItem[]>([]);
@@ -25,7 +17,6 @@ const Main: React.FC = () => {
   const [lastWallpaperChange, setLastWallpaperChange] = React.useState<
     number | null
   >(null);
-  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   React.useEffect(() => {
     const loadPhotos = async () => {
@@ -135,64 +126,21 @@ const Main: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 p-4 flex flex-col items-center">
-      <div className="mb-4 flex items-center gap-2">
-        <label
-          htmlFor="auto-rotate-select"
-          className="text-sm text-zinc-900 dark:text-zinc-100"
-        >
-          Auto-Rotate:
-        </label>
-        <div className="relative">
-          <select
-            id="auto-rotate-select"
-            value={autoRotateInterval}
-            onChange={(e) => setAutoRotateInterval(Number(e.target.value))}
-            className="appearance-none bg-gradient-to-b from-white/90 to-white/80 dark:from-zinc-700/90 dark:to-zinc-700/80 
-              backdrop-blur-xl backdrop-saturate-150 
-              border border-black/10 dark:border-white/10
-              rounded-md px-3 py-1 pr-8 text-sm text-zinc-900 dark:text-zinc-100
-              shadow-[0_0_0_1px_rgba(0,0,0,0.02)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02)]
-              hover:bg-gradient-to-b hover:from-white hover:to-white/90 
-              dark:hover:from-zinc-700 dark:hover:to-zinc-700/90
-              focus:outline-none focus:border-black/20 dark:focus:border-white/20
-              active:bg-white/90 dark:active:bg-zinc-700/90"
-          >
-            {intervalOptions.map((opt) => (
-              <option
-                key={opt.value}
-                value={opt.value}
-                className="bg-white dark:bg-zinc-800"
-              >
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2.5 4.5L6 8L9.5 4.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
+    <div className="flex-1 pl-4 pr-4 flex flex-col items-center bg-[#F0F0F0] dark:bg-[#2F2F2F] gap-2">
+      <div className="sticky top-0 z-10 w-full">
+        <Settings
+          autoRotateInterval={autoRotateInterval}
+          onAutoRotateIntervalChange={setAutoRotateInterval}
+          onFilesSelect={handleFilesSelect}
+        />
       </div>
-      <FilePicker onFilesSelect={handleFilesSelect} />
-      <PhotoGrid
-        photos={photos.map((p) => p.url)}
-        onDelete={handleDeletePhoto}
-        onPhotoClick={handleSetWallpaper}
-      />
+      <div className="flex flex-1 overflow-auto">
+        <PhotoGrid
+          photos={photos.map((p) => p.url)}
+          onDelete={handleDeletePhoto}
+          onPhotoClick={handleSetWallpaper}
+        />
+      </div>
     </div>
   );
 };
