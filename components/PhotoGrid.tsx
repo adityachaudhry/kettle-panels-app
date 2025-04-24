@@ -13,7 +13,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
 }) => {
   return (
     <div className="w-full">
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 pb-4">
         {photos.map((src, idx) => (
           <div
             key={idx}
