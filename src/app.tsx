@@ -2,7 +2,6 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { AppState } from "./state";
 import TitleBar from "../components/TitleBar";
-import Sidebar from "../components/Sidebar";
 import Main from "../components/Main";
 
 const App: React.FC = () => {
