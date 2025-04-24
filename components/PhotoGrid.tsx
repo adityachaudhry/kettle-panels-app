@@ -11,7 +11,8 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({ photos, onDelete }) => {
       {photos.map((src, idx) => (
         <div
           key={idx}
-          className="relative aspect-square bg-[#F5F5F7] dark:bg-[#232325] rounded-xl overflow-hidden flex items-center justify-center border border-[#D1D1D6] dark:border-[#232325] transition-shadow shadow-sm hover:shadow-[0_2px_8px_0_rgba(60,60,67,0.10)] focus-within:shadow-[0_2px_8px_0_rgba(60,60,67,0.15)] group"
+          className="relative bg-[#F5F5F7] dark:bg-[#232325] rounded-xl overflow-hidden flex items-center justify-center border border-[#D1D1D6] dark:border-[#232325] transition-shadow shadow-sm hover:shadow-[0_2px_8px_0_rgba(60,60,67,0.10)] focus-within:shadow-[0_2px_8px_0_rgba(60,60,67,0.15)] group"
+          style={{ aspectRatio: "16/10" }}
         >
           {onDelete && (
             <button
