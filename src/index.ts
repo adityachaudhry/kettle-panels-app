@@ -107,6 +107,7 @@ app.whenReady().then(() => {
       };
     }
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    scheduleAutoRotate();
     return { success: true };
   });
 
@@ -131,6 +132,7 @@ app.whenReady().then(() => {
         delete metadata[guid];
         fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
       }
+      scheduleAutoRotate();
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
@@ -200,6 +202,99 @@ app.whenReady().then(() => {
     fs.mkdirSync(prefsDir, { recursive: true });
     const prefsPath = path.join(prefsDir, "preferences.json");
     fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
+    scheduleAutoRotate();
     return { success: true };
   });
+
+  // --- Wallpaper Auto-Rotation Logic (Main Process) ---
+  let autoRotateTimer: NodeJS.Timeout | null = null;
+  let lastKnownInterval = 0;
+  let lastKnownPhotos: string[] = [];
+  let lastKnownGuid: string | null = null;
+
+  function getPhotosList(): string[] {
+    const userData = app.getPath("userData");
+    const photosDir = path.join(userData, "kettle-panels", "photos");
+    const metadataPath = path.join(photosDir, "metadata.json");
+    let metadata = {};
+    if (fs.existsSync(metadataPath)) {
+      try {
+        metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
+      } catch (e) {
+        metadata = {};
+      }
+    }
+    return Object.keys(metadata);
+  }
+
+  function getPreferences(): {
+    autoRotateInterval: number;
+    lastWallpaperChange?: number;
+  } {
+    const userData = app.getPath("userData");
+    const prefsDir = path.join(userData, "kettle-panels");
+    const prefsPath = path.join(prefsDir, "preferences.json");
+    let prefs = { autoRotateInterval: 0 };
+    if (fs.existsSync(prefsPath)) {
+      try {
+        prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8"));
+      } catch (e) {
+        prefs = { autoRotateInterval: 0 };
+      }
+    }
+    return prefs;
+  }
+
+  function setPreferences(prefs: any) {
+    const userData = app.getPath("userData");
+    const prefsDir = path.join(userData, "kettle-panels");
+    fs.mkdirSync(prefsDir, { recursive: true });
+    const prefsPath = path.join(prefsDir, "preferences.json");
+    fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
+  }
+
+  async function rotateWallpaper() {
+    const photos = getPhotosList();
+    if (photos.length < 2) return;
+    const prefs = getPreferences();
+    const lastChange = prefs.lastWallpaperChange || 0;
+    const now = Date.now();
+    const interval = prefs.autoRotateInterval;
+    if (interval <= 0) return;
+    // Pick a new photo (not the current one)
+    let available = photos.filter((g) => g !== lastKnownGuid);
+    if (available.length === 0) available = photos;
+    const nextGuid = available[Math.floor(Math.random() * available.length)];
+    const userData = app.getPath("userData");
+    const photosDir = path.join(userData, "kettle-panels", "photos");
+    const filePath = path.join(photosDir, nextGuid);
+    try {
+      await setWallpaper(filePath, { screen: "all" });
+      lastKnownGuid = nextGuid;
+      setPreferences({ ...prefs, lastWallpaperChange: now });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function scheduleAutoRotate() {
+    if (autoRotateTimer) clearTimeout(autoRotateTimer);
+    const prefs = getPreferences();
+    const interval = prefs.autoRotateInterval;
+    if (interval <= 0) return;
+    const photos = getPhotosList();
+    if (photos.length < 2) return;
+    const lastChange = prefs.lastWallpaperChange || 0;
+    const now = Date.now();
+    const timeSinceLast = now - lastChange;
+    let delay = interval - timeSinceLast;
+    if (delay <= 0) delay = 0;
+    autoRotateTimer = setTimeout(async () => {
+      await rotateWallpaper();
+      scheduleAutoRotate();
+    }, delay);
+  }
+
+  // Start auto-rotate on app ready
+  scheduleAutoRotate();
 });

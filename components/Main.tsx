@@ -76,41 +76,7 @@ const Main: React.FC = () => {
     }
   }, [photos.length]);
 
-  // Unified auto-rotate effect (MECE)
-  React.useEffect(() => {
-    if (photos.length < 2 || autoRotateInterval <= 0) return;
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    const now = Date.now();
-    const lastChange = lastWallpaperChange ?? now;
-    const timeSinceLast = now - lastChange;
-    if (timeSinceLast >= autoRotateInterval) {
-      // Time to rotate immediately
-      const availableIndices = photos
-        .map((_, idx) => idx)
-        .filter((idx) => photos[idx].guid !== currentWallpaperGuid);
-      if (availableIndices.length === 0) return;
-      const nextIndex =
-        availableIndices[Math.floor(Math.random() * availableIndices.length)];
-      handleSetWallpaper(nextIndex);
-      setLastWallpaperChange(now);
-      // Set timer for next interval
-      timerRef.current = setTimeout(() => {
-        // Trigger effect again
-        setLastWallpaperChange(Date.now());
-      }, autoRotateInterval);
-    } else {
-      // Set timer for remaining time
-      timerRef.current = setTimeout(() => {
-        // Trigger effect again
-        setLastWallpaperChange(Date.now());
-      }, autoRotateInterval - timeSinceLast);
-    }
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [autoRotateInterval, photos, currentWallpaperGuid, lastWallpaperChange]);
+  // --- Removed auto-rotate timer logic. Now handled in main process. ---
 
   const handleFilesSelect = (files: File[]) => {
     const readers = files.map((file) => {
