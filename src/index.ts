@@ -135,4 +135,31 @@ app.whenReady().then(() => {
       return { success: false, error: e.message };
     }
   });
+
+  ipcMain.handle("get-photos", async () => {
+    const userData = app.getPath("userData");
+    const photosDir = path.join(userData, "kettle-panels", "photos");
+    const metadataPath = path.join(photosDir, "metadata.json");
+    let metadata = {};
+    if (fs.existsSync(metadataPath)) {
+      try {
+        metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
+      } catch (e) {
+        metadata = {};
+      }
+    }
+    const photos = Object.keys(metadata).map((guid) => {
+      const filePath = path.join(photosDir, guid);
+      if (fs.existsSync(filePath)) {
+        const buffer = fs.readFileSync(filePath);
+        const base64 = buffer.toString("base64");
+        return {
+          url: `data:image/*;base64,${base64}`,
+          guid,
+        };
+      }
+      return null;
+    }).filter(Boolean);
+    return { photos };
+  });
 });

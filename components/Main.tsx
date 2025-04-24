@@ -11,6 +11,18 @@ interface PhotoItem {
 const Main: React.FC = () => {
   const [photos, setPhotos] = React.useState<PhotoItem[]>([]);
 
+  React.useEffect(() => {
+    const loadPhotos = async () => {
+      if (window.electronAPI?.invoke) {
+        const result = await window.electronAPI.invoke("get-photos");
+        if (result && Array.isArray(result.photos)) {
+          setPhotos(result.photos);
+        }
+      }
+    };
+    loadPhotos();
+  }, []);
+
   const handleFilesSelect = (files: File[]) => {
     const readers = files.map((file) => {
       return new Promise<{ url: string; name: string; guid: string }>(
