@@ -278,6 +278,7 @@ const Main: React.FC = () => {
           currentWallpaperGuid={currentWallpaperGuid}
           onBack={() => setSelectedPhotoIndex(null)}
           onGenerateWallpaper={handleGenerateWallpaper}
+          enableRegenerate={false}
         />
       ) : (
         <>
