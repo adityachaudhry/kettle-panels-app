@@ -101,28 +101,38 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     <div className="flex flex-col w-full h-full min-h-0">
       {/* Main scrollable content */}
       <div className="flex-1 overflow-y-auto px-4">
-        <div className="max-w-3xl mx-auto pt-2 pb-4 space-y-8">
+        <div className="max-w-3xl mx-auto pt-2 pb-4 space-y-4">
           {/* Original photo section */}
           <div className="flex flex-col items-center">
-            <div className="mb-2 text-sm text-gray-700 dark:text-gray-200">
+            <div className="text-xs p-2 text-black dark:text-[#DFDFDF]">
               Your Photo
             </div>
             <div className="w-full flex items-center justify-center">
               <img
                 src={photo.url}
                 alt="Original"
-                className="max-h-48 w-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                className="max-h-48 w-auto rounded-lg border border-gray-200 dark:border-[#434342]"
               />
             </div>
           </div>
 
           {/* Wallpaper section */}
           <div className="flex flex-col items-center">
-            <div className="mb-2 text-sm text-gray-700 dark:text-gray-200">
-              Wallpaper by Kettle
-            </div>
             {wallpaper ? (
-              <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="text-xs p-2 text-black dark:text-[#DFDFDF] flex items-center gap-1">
+                Made with
+                <span role="img" aria-label="love" className="text-red-500">
+                  ♥
+                </span>
+                by Kettle
+              </div>
+            ) : (
+              <div className="text-xs p-2 text-black dark:text-[#DFDFDF] flex items-center gap-1">
+                Wallpaper
+              </div>
+            )}
+            {wallpaper ? (
+              <div className="w-full rounded-lg border border-neutral-200 dark:border-[#434342] overflow-hidden">
                 <img
                   src={wallpaper}
                   alt="Wallpaper"
@@ -130,17 +140,19 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center w-full h-48 bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-                <span className="text-gray-400 mb-2">
-                  No wallpaper generated yet.
+              <div className="w-full flex flex-col items-center justify-center h-96 rounded-lg border border-neutral-200 dark:border-[#434342] bg-white dark:bg-neutral-800">
+                <span className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
+                  The wallpaper you seek is not yet generated...
                 </span>
-                <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                  onClick={() => onGenerateWallpaper(photo.guid)}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? "Generating..." : "Generate Wallpaper"}
-                </button>
+                {enableRegenerate && (
+                  <button
+                    className="px-4 py-2 bg-neutral-600 text-white text-sm rounded-lg hover:bg-neutral-700 disabled:opacity-50 disabled:hover:bg-neutral-600 transition-colors"
+                    onClick={() => onGenerateWallpaper(photo.guid)}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? "Generating..." : "Generate Wallpaper"}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -155,10 +167,10 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
       )}
 
       {/* Bottom action bar */}
-      <div className="flex-none bg-white/80 dark:bg-[#232323]/80 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-700 py-4">
+      <div className="flex-none bg-[#F0F0F0] dark:bg-[#2F2F2F] border-t border-[#e5e5e5] dark:border-[#434342] py-4">
         <div className="max-w-3xl mx-auto px-4 flex items-center justify-center gap-4">
           <button
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#656564] transition-colors disabled:opacity-50"
             onClick={onBack}
             disabled={!!actionLoading}
             aria-label="Go back"
@@ -182,7 +194,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
 
           <button
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#656564] transition-colors disabled:opacity-50"
             onClick={handleDelete}
             disabled={!!actionLoading}
             aria-label={
@@ -225,18 +237,30 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           </button>
 
           <button
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+            className={`p-2 rounded-lg text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50${
+              !wallpaper || !!actionLoading
+                ? ""
+                : " hover:bg-gray-100 dark:hover:bg-[#656564]"
+            }`}
             onClick={handleSetWallpaper}
-            disabled={currentWallpaperGuid === photo.guid || !!actionLoading}
+            disabled={
+              !wallpaper ||
+              currentWallpaperGuid === photo.guid ||
+              !!actionLoading
+            }
             aria-label={
-              currentWallpaperGuid === photo.guid
+              !wallpaper
+                ? "No wallpaper generated"
+                : currentWallpaperGuid === photo.guid
                 ? "Current wallpaper"
                 : actionLoading === "set"
                 ? "Setting wallpaper..."
                 : "Set as wallpaper"
             }
             title={
-              currentWallpaperGuid === photo.guid
+              !wallpaper
+                ? "No wallpaper generated"
+                : currentWallpaperGuid === photo.guid
                 ? "Current wallpaper"
                 : actionLoading === "set"
                 ? "Setting wallpaper..."
@@ -294,7 +318,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           {/* Regenerate button under feature flag */}
           {enableRegenerate && (
             <button
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#656564] transition-colors disabled:opacity-50"
               onClick={handleRegenerate}
               disabled={!!actionLoading}
               aria-label={
@@ -348,7 +372,11 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           )}
 
           <button
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+            className={`p-2 rounded-lg text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50${
+              !wallpaper || !!actionLoading
+                ? ""
+                : " hover:bg-gray-100 dark:hover:bg-[#656564]"
+            }`}
             onClick={handleDownload}
             disabled={!wallpaper || !!actionLoading}
             aria-label={
