@@ -274,7 +274,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           >
             {currentWallpaperGuid === photo.guid ? (
               <svg
-                className="w-5 h-5"
+                className="w-5 h-5 text-green-400 animate-fade-in-scale"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -282,7 +282,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth={4}
                   d="M5 13l4 4L19 7"
                 />
               </svg>
