@@ -23,6 +23,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
 }) => {
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [downloadSuccess, setDownloadSuccess] = React.useState(false);
 
   // Delete photo and generated images
   const handleDelete = async () => {
@@ -92,7 +93,8 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           guid: photo.guid,
         });
         if (!result.success) throw new Error(result.error || "Download failed");
-        // Optionally show a toast or notification
+        setDownloadSuccess(true);
+        setTimeout(() => setDownloadSuccess(false), 5000); // show tick for 1.2s
       }
     } catch (e: Error | unknown) {
       setError(e instanceof Error ? e.message : "An error occurred");
@@ -381,19 +383,37 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
                 : " hover:bg-gray-100 dark:hover:bg-[#656564]"
             }`}
             onClick={handleDownload}
-            disabled={!wallpaper || !!actionLoading}
+            disabled={!wallpaper || !!actionLoading || downloadSuccess}
             aria-label={
               actionLoading === "download"
                 ? "Downloading..."
+                : downloadSuccess
+                ? "Downloaded!"
                 : "Download wallpaper"
             }
             title={
               actionLoading === "download"
                 ? "Downloading..."
+                : downloadSuccess
+                ? "Downloaded!"
                 : "Download wallpaper"
             }
           >
-            {actionLoading === "download" ? (
+            {downloadSuccess ? (
+              <svg
+                className="w-5 h-5 text-green-400 animate-fade-in-scale"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={4}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            ) : actionLoading === "download" ? (
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
