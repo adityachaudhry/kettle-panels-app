@@ -155,7 +155,9 @@ app.whenReady().then(() => {
     const userData = app.getPath("userData");
     const photosDir = path.join(userData, "kettle-panels", "photos");
     const metadataPath = path.join(photosDir, "metadata.json");
-    let metadata = {};
+    let metadata: {
+      [key: string]: { originalName: string; importedAt: string };
+    } = {};
     if (fs.existsSync(metadataPath)) {
       try {
         metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
@@ -163,21 +165,23 @@ app.whenReady().then(() => {
         metadata = {};
       }
     }
-    const photos = Object.keys(metadata)
-      .map((guid) => {
-        const filePath = path.join(photosDir, guid);
-        if (fs.existsSync(filePath)) {
-          const buffer = fs.readFileSync(filePath);
-          const base64 = buffer.toString("base64");
-          return {
-            url: `data:image/*;base64,${base64}`,
-            guid,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
+    // Only return metadata, not image data
+    const photos = Object.keys(metadata).map((guid) => ({
+      guid,
+      ...metadata[guid],
+    }));
     return { photos };
+  });
+
+  // Handler to get full photo data URL by guid
+  ipcMain.handle("get-photo-data", async (_event, { guid }) => {
+    const userData = app.getPath("userData");
+    const photosDir = path.join(userData, "kettle-panels", "photos");
+    const filePath = path.join(photosDir, guid);
+    if (!fs.existsSync(filePath)) return { url: null };
+    const buffer = fs.readFileSync(filePath);
+    const base64 = buffer.toString("base64");
+    return { url: `data:image/*;base64,${base64}` };
   });
 
   // --- Generated Image Management ---

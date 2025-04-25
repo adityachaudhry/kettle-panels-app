@@ -5,8 +5,9 @@ import PhotoDetail from "./PhotoDetail";
 import { v4 as uuidv4 } from "uuid";
 
 interface PhotoItem {
-  url: string;
   guid: string;
+  originalName?: string;
+  importedAt?: string;
 }
 
 const Main: React.FC = () => {
@@ -28,6 +29,7 @@ const Main: React.FC = () => {
   const [thumbnails, setThumbnails] = React.useState<
     Record<string, string | null>
   >({}); // guid -> thumbnail dataUrl/null
+  const [photoData, setPhotoData] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
     const loadPhotos = async () => {
@@ -158,7 +160,7 @@ const Main: React.FC = () => {
       // Update state
       setPhotos((prev) => [
         ...prev,
-        ...fileObjs.map((f) => ({ url: f.url, guid: f.guid })),
+        ...fileObjs.map((f) => ({ guid: f.guid })),
       ]);
       setThumbnails((prev) => {
         const next = { ...prev };
@@ -259,9 +261,22 @@ const Main: React.FC = () => {
   };
 
   React.useEffect(() => {
-    // When L2 view is opened, fetch the wallpaper if not already loaded
+    // When L2 view is opened, fetch the full image if not already loaded
     if (selectedPhotoIndex !== null && photos[selectedPhotoIndex]) {
       const guid = photos[selectedPhotoIndex].guid;
+      if (!photoData[guid]) {
+        (async () => {
+          if (window.electronAPI?.invoke) {
+            const result = await window.electronAPI.invoke("get-photo-data", {
+              guid,
+            });
+            if (result && result.url) {
+              setPhotoData((prev) => ({ ...prev, [guid]: result.url }));
+            }
+          }
+        })();
+      }
+      // When L2 view is opened, fetch the wallpaper if not already loaded
       if (!wallpapers[guid]) {
         fetchWallpaper(guid);
       }
@@ -272,7 +287,10 @@ const Main: React.FC = () => {
     <div className="flex flex-col w-full h-full min-h-0 bg-[#F0F0F0] dark:bg-[#2F2F2F]">
       {selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? (
         <PhotoDetail
-          photo={photos[selectedPhotoIndex]}
+          photo={{
+            guid: photos[selectedPhotoIndex].guid,
+            url: photoData[photos[selectedPhotoIndex].guid] || "",
+          }}
           wallpaper={wallpapers[photos[selectedPhotoIndex].guid] || null}
           isGenerating={isGenerating}
           currentWallpaperGuid={currentWallpaperGuid}
@@ -300,7 +318,7 @@ const Main: React.FC = () => {
           </div>
           <div className="flex-1 min-h-0 px-4 overflow-auto">
             <PhotoGrid
-              photos={photos.map((p) => thumbnails[p.guid] || p.url)}
+              photos={photos.map((p) => thumbnails[p.guid] || "")}
               onDelete={handleDeletePhoto}
               onPhotoClick={setSelectedPhotoIndex}
             />
