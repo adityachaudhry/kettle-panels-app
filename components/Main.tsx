@@ -297,10 +297,9 @@ const Main: React.FC = () => {
           onBack={() => setSelectedPhotoIndex(null)}
           onGenerateWallpaper={handleGenerateWallpaper}
           enableRegenerate={false}
-          onDelete={() => {
-            setPhotos((prev) =>
-              prev.filter((_, i) => i !== selectedPhotoIndex)
-            );
+          onDelete={async () => {
+            if (selectedPhotoIndex === null) return;
+            await handleDeletePhoto(selectedPhotoIndex);
             setSelectedPhotoIndex(null);
           }}
         />

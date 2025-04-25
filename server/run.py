@@ -33,7 +33,7 @@ async def image_gen(request: Request):
             result = client.images.edit(
                 model="gpt-image-1",
                 image=img_file,
-                prompt="Recreate this image in animated style with elements from ghibli studio but keeping the original color grading. Pay special attention to not breaking the physics of the environment, or of hands, and really try to preserve the essence of the subject(s) of the photo. Also, please do not laterally flip the image.",
+                prompt="Recreate this image in animated style with elements from ghibli studio but keeping the original color grading. Pay special attention to not breaking the physics of the environment, or of hands, and really try to preserve the essence of the subject(s) of the photo. Please do not laterally flip or rotate the image.",
                 size="1536x1024",
                 quality="high"
             )
