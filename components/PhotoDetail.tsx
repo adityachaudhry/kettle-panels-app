@@ -8,6 +8,7 @@ interface PhotoDetailProps {
   onBack: () => void;
   onGenerateWallpaper: (guid: string) => void;
   enableRegenerate: boolean; // feature flag for regenerate button
+  onDelete?: () => void; // optional callback for after delete
 }
 
 const PhotoDetail: React.FC<PhotoDetailProps> = ({
@@ -18,6 +19,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
   onBack,
   onGenerateWallpaper,
   enableRegenerate,
+  onDelete,
 }) => {
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -32,6 +34,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
           guid: photo.guid,
         });
         if (!result.success) throw new Error(result.error || "Delete failed");
+        if (onDelete) onDelete(); // notify parent to refresh
         onBack();
       }
     } catch (e: Error | unknown) {
@@ -101,7 +104,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     <div className="flex flex-col w-full h-full min-h-0">
       {/* Main scrollable content */}
       <div className="flex-1 overflow-y-auto px-4">
-        <div className="max-w-3xl mx-auto pt-2 pb-4 space-y-4">
+        <div className="max-w-3xl mx-auto pb-4 space-y-4">
           {/* Original photo section */}
           <div className="flex flex-col items-center">
             <div className="text-xs p-2 text-black dark:text-[#DFDFDF]">

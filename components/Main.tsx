@@ -279,6 +279,12 @@ const Main: React.FC = () => {
           onBack={() => setSelectedPhotoIndex(null)}
           onGenerateWallpaper={handleGenerateWallpaper}
           enableRegenerate={false}
+          onDelete={() => {
+            setPhotos((prev) =>
+              prev.filter((_, i) => i !== selectedPhotoIndex)
+            );
+            setSelectedPhotoIndex(null);
+          }}
         />
       ) : (
         <>
