@@ -269,7 +269,7 @@ const Main: React.FC = () => {
   }, [selectedPhotoIndex]);
 
   return (
-    <div className="flex-1 pl-4 pr-4 flex flex-col items-center bg-[#F0F0F0] dark:bg-[#2F2F2F] min-h-screen">
+    <div className="flex flex-col w-full h-full min-h-0 bg-[#F0F0F0] dark:bg-[#2F2F2F]">
       {selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? (
         <PhotoDetail
           photo={photos[selectedPhotoIndex]}
@@ -278,21 +278,20 @@ const Main: React.FC = () => {
           currentWallpaperGuid={currentWallpaperGuid}
           onBack={() => setSelectedPhotoIndex(null)}
           onGenerateWallpaper={handleGenerateWallpaper}
-          onSetWallpaperImmediate={handleSetWallpaperImmediate}
         />
       ) : (
         <>
-          <div className="sticky top-0 z-10 w-full">
+          <div className="flex-none px-4">
             <Settings
               autoRotateInterval={autoRotateInterval}
               onAutoRotateIntervalChange={setAutoRotateInterval}
               onFilesSelect={handleFilesSelect}
             />
-            <div className="text-xs p-2 text-black dark:text-[#DFDFDF] mt-6">
+            <div className="text-xs text-black dark:text-[#DFDFDF] mt-6 mb-2">
               Your Photos
             </div>
           </div>
-          <div className="flex flex-1 overflow-auto w-full">
+          <div className="flex-1 min-h-0 px-4 overflow-auto">
             <PhotoGrid
               photos={photos.map((p) => thumbnails[p.guid] || p.url)}
               onDelete={handleDeletePhoto}

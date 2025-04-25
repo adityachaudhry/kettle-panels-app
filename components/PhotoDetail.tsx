@@ -7,7 +7,6 @@ interface PhotoDetailProps {
   currentWallpaperGuid: string | null;
   onBack: () => void;
   onGenerateWallpaper: (guid: string) => void;
-  onSetWallpaperImmediate: (guid: string) => void;
 }
 
 const PhotoDetail: React.FC<PhotoDetailProps> = ({
@@ -17,7 +16,6 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
   currentWallpaperGuid,
   onBack,
   onGenerateWallpaper,
-  onSetWallpaperImmediate,
 }) => {
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -34,8 +32,8 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
         if (!result.success) throw new Error(result.error || "Delete failed");
         onBack();
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: Error | unknown) {
+      setError(e instanceof Error ? e.message : "An error occurred");
     }
     setActionLoading(null);
   };
@@ -53,8 +51,8 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
         if (!result.success)
           throw new Error(result.error || "Set wallpaper failed");
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: Error | unknown) {
+      setError(e instanceof Error ? e.message : "An error occurred");
     }
     setActionLoading(null);
   };
@@ -73,8 +71,8 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
         // Optionally update UI with new wallpaper
         window.location.reload(); // crude, but ensures UI updates
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: Error | unknown) {
+      setError(e instanceof Error ? e.message : "An error occurred");
     }
     setActionLoading(null);
   };
@@ -91,63 +89,71 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
         if (!result.success) throw new Error(result.error || "Download failed");
         // Optionally show a toast or notification
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: Error | unknown) {
+      setError(e instanceof Error ? e.message : "An error occurred");
     }
     setActionLoading(null);
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center py-8 pb-24">
-      <button
-        className="mb-6 px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-        onClick={onBack}
-      >
-        ← Back
-      </button>
-      <div className="mb-4 w-full flex flex-col items-center">
-        <div className="mb-2 text-sm text-gray-700 dark:text-gray-200">
-          Your Photo
-        </div>
-        <img
-          src={photo.url}
-          alt="Original"
-          className="rounded-lg max-w-full max-h-96 object-contain border border-gray-200 dark:border-gray-700"
-        />
-      </div>
-      <div className="mb-4 w-full flex flex-col items-center">
-        <div className="mb-2 text-sm text-gray-700 dark:text-gray-200">
-          Wallpaper by Kettle
-        </div>
-        {wallpaper ? (
-          <img
-            src={wallpaper}
-            alt="Wallpaper"
-            className="rounded-lg max-w-full max-h-96 object-contain border border-gray-200 dark:border-gray-700"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center w-full h-32 bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-            <span className="text-gray-400 mb-2">
-              No wallpaper generated yet.
-            </span>
-            <button
-              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              onClick={() => onGenerateWallpaper(photo.guid)}
-              disabled={isGenerating}
-            >
-              {isGenerating ? "Generating..." : "Generate Wallpaper"}
-            </button>
+    <div className="flex flex-col w-full h-full min-h-0">
+      {/* Main scrollable content */}
+      <div className="flex-1 overflow-y-auto px-4">
+        <div className="max-w-3xl mx-auto pt-2 pb-4 space-y-8">
+          {/* Original photo section */}
+          <div className="flex flex-col items-center">
+            <div className="mb-2 text-sm text-gray-700 dark:text-gray-200">
+              Your Photo
+            </div>
+            <div className="w-full flex items-center justify-center">
+              <img
+                src={photo.url}
+                alt="Original"
+                className="max-h-48 w-auto rounded-lg border border-gray-200 dark:border-gray-700"
+              />
+            </div>
           </div>
-        )}
+
+          {/* Wallpaper section */}
+          <div className="flex flex-col items-center">
+            <div className="mb-2 text-sm text-gray-700 dark:text-gray-200">
+              Wallpaper by Kettle
+            </div>
+            {wallpaper ? (
+              <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <img
+                  src={wallpaper}
+                  alt="Wallpaper"
+                  className="w-full h-auto"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center w-full h-48 bg-gray-100 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                <span className="text-gray-400 mb-2">
+                  No wallpaper generated yet.
+                </span>
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  onClick={() => onGenerateWallpaper(photo.guid)}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? "Generating..." : "Generate Wallpaper"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      {/* Error message */}
+
+      {/* Error toast */}
       {error && (
-        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-2 rounded-lg shadow-lg text-sm">
+        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-200 px-4 py-2 rounded-lg shadow-lg text-sm z-40">
           {error}
         </div>
       )}
+
       {/* Bottom action bar */}
-      <div className="fixed bottom-0 left-0 w-full bg-white/80 dark:bg-[#232323]/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700 py-4 z-50 shadow-xl">
+      <div className="flex-none bg-white/80 dark:bg-[#232323]/80 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-700 py-4">
         <div className="max-w-3xl mx-auto px-4 flex items-center justify-center gap-4">
           <button
             className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
