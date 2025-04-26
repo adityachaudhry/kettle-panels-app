@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, ipcMain, nativeTheme, Menu } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import { setWallpaper } from "wallpaper";
@@ -7,6 +7,12 @@ import { setWallpaper } from "wallpaper";
 // whether you're running in development or production).
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
+
+const menuTemplate = [
+  {
+    label: "Kettle Panels",
+  },
+];
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -80,6 +86,8 @@ app.whenReady().then(() => {
       win.webContents.send("theme-updated", nativeTheme.shouldUseDarkColors);
     });
   });
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
 
   ipcMain.handle("save-photos", async (_event, { files }) => {
     const userData = app.getPath("userData");

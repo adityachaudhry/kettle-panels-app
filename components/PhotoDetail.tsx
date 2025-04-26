@@ -145,7 +145,7 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
                 />
               </div>
             ) : (
-              <div className="w-full flex flex-col items-center justify-center h-96 rounded-lg border border-neutral-200 dark:border-[#434342] bg-white dark:bg-neutral-800">
+              <div className="w-full aspect-video flex flex-col items-center justify-center rounded-lg border border-neutral-200 dark:border-[#434342] bg-white dark:bg-neutral-800">
                 <span className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
                   The wallpaper you seek is not yet generated...
                 </span>
