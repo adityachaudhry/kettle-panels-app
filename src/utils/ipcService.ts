@@ -53,10 +53,6 @@ export const deletePhoto = async (guid: string) => {
   return await getAPI()("delete-photo", { guid });
 };
 
-export const deleteThumbnail = async (guid: string) => {
-  return await getAPI()("delete-thumbnail", { guid });
-};
-
 export const setWallpaper = async (guid: string, resetCountdown?: boolean) => {
   return await getAPI()("set-wallpaper", {
     guid,

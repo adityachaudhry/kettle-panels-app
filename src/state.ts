@@ -10,7 +10,6 @@ import {
   getPreferences,
   setPreferences,
   deletePhoto as ipcDeletePhoto,
-  deleteThumbnail,
   setWallpaper as ipcSetWallpaper,
   getWallpaper as ipcGetWallpaper,
   generateWallpaper,
@@ -185,7 +184,6 @@ export const useStore = create<State & Action>((set, get) => ({
       ),
     });
     await ipcDeletePhoto(photo.guid);
-    await deleteThumbnail(photo.guid);
     if (photos.length - 1 === 0) {
       set({ lastWallpaperChange: null });
     }
