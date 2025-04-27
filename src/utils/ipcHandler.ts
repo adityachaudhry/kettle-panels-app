@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, nativeTheme } from "electron";
 import { setWallpaper } from "wallpaper";
 import {
   configureWallpaperRotation,
-  scheduleAutoRotate,
+  startCronLikeWallpaperCheck,
 } from "./rotateWallpaper";
 import {
   getUserDataPath,
@@ -135,8 +135,11 @@ export function registerIpcHandlers(appInstance: typeof app) {
         }
         await setWallpaper(genFilePath, { screen: "all" });
         if (resetCountdown) {
-          const prefs = getPreferences();
-          setPreferences({ ...prefs, lastWallpaperChange: Date.now() });
+          const prefs = getAllPreferences(userData);
+          saveAllPreferences(userData, {
+            ...prefs,
+            lastWallpaperChange: Date.now(),
+          });
         }
         return { success: true };
       } catch (e: any) {
@@ -226,30 +229,13 @@ export function registerIpcHandlers(appInstance: typeof app) {
   });
 
   // --- Wallpaper Auto-Rotation Logic dependencies ---
-  function getPhotosList(): string[] {
-    return Object.keys(getAllPhotosMetadata(userData));
-  }
-
-  function getPreferences(): {
-    autoRotateInterval: number;
-    lastWallpaperChange?: number;
-  } {
-    return getAllPreferences(userData);
-  }
-
-  function setPreferences(prefs: any) {
-    saveAllPreferences(userData, prefs);
-  }
+  // (moved to rotateWallpaper.ts)
 
   configureWallpaperRotation({
     userData,
-    getPhotosList,
-    getPreferences,
-    setPreferences,
-    getGeneratedImagePath,
     fetchAndStoreGeneratedImage,
   });
 
-  // Start auto-rotate on app ready
-  scheduleAutoRotate();
+  // Start cron-like auto-rotate on app ready
+  startCronLikeWallpaperCheck();
 }
