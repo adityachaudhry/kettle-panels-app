@@ -5,6 +5,7 @@ import {
   regenerateWallpaper,
   downloadWallpaper,
 } from "../src/utils/ipcService";
+import { useStore } from "../src/state";
 
 interface PhotoDetailProps {
   photo: { url: string; guid: string };
@@ -27,9 +28,14 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
   enableRegenerate,
   onDelete,
 }) => {
-  const [actionLoading, setActionLoading] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [downloadSuccess, setDownloadSuccess] = React.useState(false);
+  const {
+    actionLoading,
+    setActionLoading,
+    error,
+    setError,
+    downloadSuccess,
+    setDownloadSuccess,
+  } = useStore();
 
   // Delete photo and generated images
   const handleDelete = async () => {
