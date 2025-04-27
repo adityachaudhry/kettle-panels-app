@@ -3,6 +3,20 @@ import PhotoGrid from "./PhotoGrid";
 import Settings from "./Settings";
 import PhotoDetail from "./PhotoDetail";
 import { v4 as uuidv4 } from "uuid";
+import {
+  getPhotos,
+  getThumbnails,
+  savePhotos,
+  saveThumbnails,
+  getPreferences,
+  setPreferences,
+  deletePhoto as ipcDeletePhoto,
+  deleteThumbnail,
+  setWallpaper as ipcSetWallpaper,
+  getWallpaper as ipcGetWallpaper,
+  generateWallpaper,
+  getPhotoData,
+} from "../src/utils/ipcService";
 
 interface PhotoItem {
   guid: string;
@@ -33,42 +47,38 @@ const Main: React.FC = () => {
 
   React.useEffect(() => {
     const loadPhotos = async () => {
-      if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("get-photos");
-        if (result && Array.isArray(result.photos)) {
-          setPhotos(result.photos);
-        }
-        // Load thumbnails mapping
-        const thumbResult = await window.electronAPI.invoke("get-thumbnails");
-        const loadedThumbnails =
-          thumbResult && thumbResult.thumbnails ? thumbResult.thumbnails : {};
-        setThumbnails(loadedThumbnails);
+      const result = await getPhotos();
+      if (result && Array.isArray(result.photos)) {
+        setPhotos(result.photos);
+      }
+      // Load thumbnails mapping
+      const thumbResult = await getThumbnails();
+      const loadedThumbnails =
+        thumbResult && thumbResult.thumbnails ? thumbResult.thumbnails : {};
+      setThumbnails(loadedThumbnails);
 
-        // Generate missing thumbnails for photos that don't have them
-        if (result && Array.isArray(result.photos)) {
-          const missing = result.photos.filter(
-            (p: any) => !loadedThumbnails[p.guid]
+      // Generate missing thumbnails for photos that don't have them
+      if (result && Array.isArray(result.photos)) {
+        const missing = result.photos.filter(
+          (p: any) => !loadedThumbnails[p.guid]
+        );
+        if (missing.length > 0) {
+          const thumbPairs = await Promise.all(
+            missing.map(async (p: any) => {
+              const thumb = await generateThumbnail(p.url);
+              return { guid: p.guid, thumbnail: thumb };
+            })
           );
-          if (missing.length > 0) {
-            const thumbPairs = await Promise.all(
-              missing.map(async (p: any) => {
-                const thumb = await generateThumbnail(p.url);
-                return { guid: p.guid, thumbnail: thumb };
-              })
-            );
-            // Save to backend
-            await window.electronAPI.invoke("save-thumbnails", {
-              thumbnails: thumbPairs,
+          // Save to backend
+          await saveThumbnails(thumbPairs);
+          // Update state
+          setThumbnails((prev) => {
+            const next = { ...prev };
+            thumbPairs.forEach(({ guid, thumbnail }) => {
+              next[guid] = thumbnail;
             });
-            // Update state
-            setThumbnails((prev) => {
-              const next = { ...prev };
-              thumbPairs.forEach(({ guid, thumbnail }) => {
-                next[guid] = thumbnail;
-              });
-              return next;
-            });
-          }
+            return next;
+          });
         }
       }
     };
@@ -81,14 +91,12 @@ const Main: React.FC = () => {
   // Load preferences on mount
   React.useEffect(() => {
     const loadPrefs = async () => {
-      if (window.electronAPI?.invoke) {
-        const prefs = await window.electronAPI.invoke("get-preferences");
-        if (prefs && typeof prefs.autoRotateInterval === "number") {
-          setAutoRotateInterval(prefs.autoRotateInterval);
-        }
-        if (prefs && typeof prefs.lastWallpaperChange === "number") {
-          setLastWallpaperChange(prefs.lastWallpaperChange);
-        }
+      const prefs = await getPreferences();
+      if (prefs && typeof prefs.autoRotateInterval === "number") {
+        setAutoRotateInterval(prefs.autoRotateInterval);
+      }
+      if (prefs && typeof prefs.lastWallpaperChange === "number") {
+        setLastWallpaperChange(prefs.lastWallpaperChange);
       }
     };
     loadPrefs();
@@ -96,12 +104,10 @@ const Main: React.FC = () => {
 
   // Save preferences when interval or lastWallpaperChange changes
   React.useEffect(() => {
-    if (window.electronAPI?.invoke) {
-      window.electronAPI.invoke("set-preferences", {
-        autoRotateInterval,
-        lastWallpaperChange,
-      });
-    }
+    setPreferences({
+      autoRotateInterval,
+      lastWallpaperChange,
+    });
   }, [autoRotateInterval, lastWallpaperChange]);
 
   // Disable auto-rotate if fewer than 2 photos
@@ -170,19 +176,14 @@ const Main: React.FC = () => {
         return next;
       });
       // Save to userData/kettle-panels/photos via main process
-      if (window.electronAPI?.invoke) {
-        await window.electronAPI.invoke("save-photos", {
-          files: fileObjs.map((f) => ({
-            guid: f.guid,
-            name: f.name,
-            dataUrl: f.url,
-          })),
-        });
-        // Save thumbnails
-        await window.electronAPI.invoke("save-thumbnails", {
-          thumbnails: thumbPairs,
-        });
-      }
+      await savePhotos(
+        fileObjs.map((f) => ({
+          guid: f.guid,
+          name: f.name,
+          dataUrl: f.url,
+        }))
+      );
+      await saveThumbnails(thumbPairs);
     });
   };
 
@@ -194,10 +195,8 @@ const Main: React.FC = () => {
       delete next[photo.guid];
       return next;
     });
-    if (window.electronAPI?.invoke) {
-      await window.electronAPI.invoke("delete-photo", { guid: photo.guid });
-      await window.electronAPI.invoke("delete-thumbnail", { guid: photo.guid });
-    }
+    await ipcDeletePhoto(photo.guid);
+    await deleteThumbnail(photo.guid);
     // If all photos are deleted, reset lastWallpaperChange
     if (photos.length - 1 === 0) {
       setLastWallpaperChange(null);
@@ -207,25 +206,19 @@ const Main: React.FC = () => {
   const handleSetWallpaper = async (index: number) => {
     const photo = photos[index];
     if (photo.guid === currentWallpaperGuid) return; // Already set
-    if (window.electronAPI?.invoke) {
-      const result = await window.electronAPI.invoke("set-wallpaper", {
-        guid: photo.guid,
-      });
-      if (result && result.success) {
-        setCurrentWallpaperGuid(photo.guid);
-      }
+    const result = await ipcSetWallpaper(photo.guid);
+    if (result && result.success) {
+      setCurrentWallpaperGuid(photo.guid);
     }
   };
 
   // Fetch generated wallpaper for a photo (stub: checks local state, could call backend)
   const fetchWallpaper = async (guid: string) => {
     if (wallpapers[guid]) return wallpapers[guid];
-    if (window.electronAPI?.invoke) {
-      const result = await window.electronAPI.invoke("get-wallpaper", { guid });
-      if (result && result.wallpaper) {
-        setWallpapers((prev) => ({ ...prev, [guid]: result.wallpaper }));
-        return result.wallpaper;
-      }
+    const result = await ipcGetWallpaper(guid);
+    if (result && result.wallpaper) {
+      setWallpapers((prev) => ({ ...prev, [guid]: result.wallpaper }));
+      return result.wallpaper;
     }
     return null;
   };
@@ -233,14 +226,9 @@ const Main: React.FC = () => {
   // Generate wallpaper for a photo
   const handleGenerateWallpaper = async (guid: string) => {
     setIsGenerating(true);
-    if (window.electronAPI?.invoke) {
-      const result = await window.electronAPI.invoke("generate-wallpaper", {
-        guid,
-        style: "default",
-      });
-      if (result && result.wallpaper) {
-        setWallpapers((prev) => ({ ...prev, [guid]: result.wallpaper }));
-      }
+    const result = await generateWallpaper(guid, "default");
+    if (result && result.wallpaper) {
+      setWallpapers((prev) => ({ ...prev, [guid]: result.wallpaper }));
     }
     setIsGenerating(false);
   };
@@ -248,15 +236,10 @@ const Main: React.FC = () => {
   // Set wallpaper and reset countdown
   const handleSetWallpaperImmediate = async (guid: string) => {
     if (guid === currentWallpaperGuid) return;
-    if (window.electronAPI?.invoke) {
-      const result = await window.electronAPI.invoke("set-wallpaper", {
-        guid,
-        resetCountdown: true,
-      });
-      if (result && result.success) {
-        setCurrentWallpaperGuid(guid);
-        setLastWallpaperChange(Date.now());
-      }
+    const result = await ipcSetWallpaper(guid, true);
+    if (result && result.success) {
+      setCurrentWallpaperGuid(guid);
+      setLastWallpaperChange(Date.now());
     }
   };
 
@@ -266,13 +249,9 @@ const Main: React.FC = () => {
       const guid = photos[selectedPhotoIndex].guid;
       if (!photoData[guid]) {
         (async () => {
-          if (window.electronAPI?.invoke) {
-            const result = await window.electronAPI.invoke("get-photo-data", {
-              guid,
-            });
-            if (result && result.url) {
-              setPhotoData((prev) => ({ ...prev, [guid]: result.url }));
-            }
+          const result = await getPhotoData(guid);
+          if (result && result.url) {
+            setPhotoData((prev) => ({ ...prev, [guid]: result.url }));
           }
         })();
       }

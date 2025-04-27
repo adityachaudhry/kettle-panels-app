@@ -1,5 +1,6 @@
 import React from "react";
 import { create } from "zustand";
+import { getIsDarkMode, onThemeUpdated } from "./utils/ipcService";
 
 type Theme = "light" | "dark";
 
@@ -20,12 +21,12 @@ export const AppState: React.FC = () => {
   const store = useStore();
 
   React.useEffect(() => {
-    window.electronAPI.invoke("isDarkMode").then((isDark: boolean) => {
+    getIsDarkMode().then((isDark) => {
       store.updateTheme(isDark ? "dark" : "light");
       document.documentElement.classList.toggle("dark", isDark);
     });
 
-    window.electronAPI.on("theme-updated", (event, isDark: boolean) => {
+    onThemeUpdated((isDark) => {
       store.updateTheme(isDark ? "dark" : "light");
       document.documentElement.classList.toggle("dark", isDark);
     });

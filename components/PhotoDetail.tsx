@@ -1,4 +1,10 @@
 import React from "react";
+import {
+  deletePhoto as ipcDeletePhoto,
+  setWallpaper as ipcSetWallpaper,
+  regenerateWallpaper,
+  downloadWallpaper,
+} from "../src/utils/ipcService";
 
 interface PhotoDetailProps {
   photo: { url: string; guid: string };
@@ -30,14 +36,10 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setActionLoading("delete");
     setError(null);
     try {
-      if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("delete-photo", {
-          guid: photo.guid,
-        });
-        if (!result.success) throw new Error(result.error || "Delete failed");
-        if (onDelete) onDelete(); // notify parent to refresh
-        onBack();
-      }
+      const result = await ipcDeletePhoto(photo.guid);
+      if (!result.success) throw new Error(result.error || "Delete failed");
+      if (onDelete) onDelete(); // notify parent to refresh
+      onBack();
     } catch (e: Error | unknown) {
       setError(e instanceof Error ? e.message : "An error occurred");
     }
@@ -49,14 +51,9 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setActionLoading("set");
     setError(null);
     try {
-      if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("set-wallpaper", {
-          guid: photo.guid,
-          resetCountdown: true,
-        });
-        if (!result.success)
-          throw new Error(result.error || "Set wallpaper failed");
-      }
+      const result = await ipcSetWallpaper(photo.guid, true);
+      if (!result.success)
+        throw new Error(result.error || "Set wallpaper failed");
     } catch (e: Error | unknown) {
       setError(e instanceof Error ? e.message : "An error occurred");
     }
@@ -68,15 +65,9 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setActionLoading("regen");
     setError(null);
     try {
-      if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("regenerate-wallpaper", {
-          guid: photo.guid,
-        });
-        if (!result.success)
-          throw new Error(result.error || "Regenerate failed");
-        // Optionally update UI with new wallpaper
-        window.location.reload(); // crude, but ensures UI updates
-      }
+      const result = await regenerateWallpaper(photo.guid);
+      if (!result.success) throw new Error(result.error || "Regenerate failed");
+      window.location.reload(); // crude, but ensures UI updates
     } catch (e: Error | unknown) {
       setError(e instanceof Error ? e.message : "An error occurred");
     }
@@ -88,14 +79,10 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
     setActionLoading("download");
     setError(null);
     try {
-      if (window.electronAPI?.invoke) {
-        const result = await window.electronAPI.invoke("download-wallpaper", {
-          guid: photo.guid,
-        });
-        if (!result.success) throw new Error(result.error || "Download failed");
-        setDownloadSuccess(true);
-        setTimeout(() => setDownloadSuccess(false), 5000); // show tick for 1.2s
-      }
+      const result = await downloadWallpaper(photo.guid);
+      if (!result.success) throw new Error(result.error || "Download failed");
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 5000); // show tick for 1.2s
     } catch (e: Error | unknown) {
       setError(e instanceof Error ? e.message : "An error occurred");
     }
