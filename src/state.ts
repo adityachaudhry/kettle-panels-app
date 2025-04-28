@@ -14,9 +14,8 @@ import {
   getWallpaper as ipcGetWallpaper,
   generateWallpaper,
   getPhotoData,
-  regenerateWallpaper,
-  downloadWallpaper,
 } from "./utils/ipcService";
+import { v4 as uuidv4 } from "uuid";
 
 type Theme = "light" | "dark";
 
@@ -125,7 +124,7 @@ export const useStore = create<State & Action>((set, get) => ({
       return new Promise<{ url: string; name: string; guid: string }>(
         (resolve, reject) => {
           const reader = new FileReader();
-          const guid = crypto.randomUUID();
+          const guid = uuidv4();
           reader.onload = () =>
             resolve({ url: reader.result as string, name: file.name, guid });
           reader.onerror = reject;
