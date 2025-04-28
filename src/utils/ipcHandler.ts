@@ -1,10 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme } from "electron";
 import { setWallpaper } from "wallpaper";
 import {
-  configureWallpaperRotation,
-  startCronLikeWallpaperCheck,
-} from "./rotateWallpaper";
-import {
   getUserDataPath,
   getAllPhotosMetadata,
   getAllThumbnails,
@@ -15,7 +11,6 @@ import {
   savePhotoFile,
   deletePhotoFile,
   readPhotoFileAsDataUrl,
-  saveGeneratedImage,
   deleteGeneratedImage,
   readGeneratedImageAsDataUrl,
   copyFileToDownloads,
@@ -26,6 +21,7 @@ import {
   deleteThumbnails,
   deleteGeneratedMappingEntry,
 } from "./fileIO";
+import { fetchAndStoreGeneratedImage } from "./generateWallpaper";
 
 export function registerIpcHandlers(appInstance: typeof app) {
   const userData = getUserDataPath(appInstance);
@@ -88,42 +84,6 @@ export function registerIpcHandlers(appInstance: typeof app) {
 
   // --- Generated Image Management ---
   const DEFAULT_STYLE = "default";
-  const isDev = process.env.NODE_ENV === "development";
-  const API_URL =
-    process.env.API_URL ||
-    (isDev ? "http://localhost:8000" : "https://your-production-api.com");
-
-  async function fetchAndStoreGeneratedImage(
-    guid: string,
-    style: string = DEFAULT_STYLE
-  ): Promise<string> {
-    const metadata = getAllPhotosMetadata(userData);
-    if (!metadata[guid]) throw new Error("Original image not found");
-    const url = readPhotoFileAsDataUrl(userData, guid);
-    if (!url) throw new Error("Original image not found");
-    const base64 = url.split(",")[1];
-    const apiUrl = `${API_URL}/image-gen`;
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: base64, style }),
-    });
-    if (!res.ok) throw new Error("Failed to fetch generated image from API");
-    const json = await res.json();
-    const generatedBase64 = json.image;
-    if (!generatedBase64) throw new Error("No image returned from API");
-    const genFilePath = saveGeneratedImage(
-      userData,
-      guid,
-      style,
-      generatedBase64
-    );
-    const mapping = getAllGeneratedMapping(userData);
-    if (!mapping[guid]) mapping[guid] = {};
-    mapping[guid][style] = `${guid}_${style}`;
-    saveAllGeneratedMapping(userData, mapping);
-    return genFilePath;
-  }
 
   ipcMain.handle(
     "set-wallpaper",
@@ -227,15 +187,4 @@ export function registerIpcHandlers(appInstance: typeof app) {
     const mapping = readThumbnails();
     return { thumbnails: mapping };
   });
-
-  // --- Wallpaper Auto-Rotation Logic dependencies ---
-  // (moved to rotateWallpaper.ts)
-
-  configureWallpaperRotation({
-    userData,
-    fetchAndStoreGeneratedImage,
-  });
-
-  // Start cron-like auto-rotate on app ready
-  startCronLikeWallpaperCheck();
 }

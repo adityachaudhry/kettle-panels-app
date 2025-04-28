@@ -5,6 +5,10 @@ import {
   getGeneratedImagePath,
   saveAllPreferences,
 } from "./fileIO";
+import {
+  fetchAndStoreGeneratedImage,
+  DEFAULT_STYLE,
+} from "./generateWallpaper";
 
 let lastKnownGuid: string | null = null;
 let cronCheckTimer: NodeJS.Timeout | null = null;
@@ -12,23 +16,13 @@ let cronCheckTimer: NodeJS.Timeout | null = null;
 // These will be set by the main process
 let userData = "";
 
-let fetchAndStoreGeneratedImage: (
-  guid: string,
-  style?: string
-) => Promise<string>;
-const DEFAULT_STYLE = "default";
-
 // --- Wallpaper Auto-Rotation Logic dependencies ---
 export function getPhotosList(): string[] {
   return Object.keys(getAllPhotosMetadata(userData));
 }
 
-export function configureWallpaperRotation(deps: {
-  userData: string;
-  fetchAndStoreGeneratedImage: typeof fetchAndStoreGeneratedImage;
-}) {
+export function configureWallpaperRotation(deps: { userData: string }) {
   userData = deps.userData;
-  fetchAndStoreGeneratedImage = deps.fetchAndStoreGeneratedImage;
 }
 
 export async function rotateWallpaper() {
@@ -40,17 +34,56 @@ export async function rotateWallpaper() {
   if (interval <= 0) return;
   let available = photos.filter((g) => g !== lastKnownGuid);
   if (available.length === 0) available = photos;
-  const nextGuid = available[Math.floor(Math.random() * available.length)];
-  try {
-    let genFilePath = getGeneratedImagePath(userData, nextGuid, DEFAULT_STYLE);
-    if (!genFilePath) {
-      genFilePath = await fetchAndStoreGeneratedImage(nextGuid, DEFAULT_STYLE);
+
+  // Pick a random photo
+  const randomGuid = available[Math.floor(Math.random() * available.length)];
+  const genFilePath = getGeneratedImagePath(
+    userData,
+    randomGuid,
+    DEFAULT_STYLE
+  );
+
+  if (genFilePath) {
+    // If the random photo has a generated wallpaper, set it
+    try {
+      await setWallpaper(genFilePath, { screen: "all" });
+      lastKnownGuid = randomGuid;
+      saveAllPreferences(userData, { ...prefs, lastWallpaperChange: now });
+    } catch (e) {
+      // ignore
     }
-    await setWallpaper(genFilePath, { screen: "all" });
-    lastKnownGuid = nextGuid;
-    saveAllPreferences(userData, { ...prefs, lastWallpaperChange: now });
-  } catch (e) {
-    // ignore
+    return;
+  } else {
+    // If not, kick off generation in background
+    fetchAndStoreGeneratedImage(userData, randomGuid, DEFAULT_STYLE).catch(
+      () => {
+        // ignore
+      }
+    );
+    // Try to find any other already-generated wallpaper
+    const alreadyGenerated = available.filter((guid) =>
+      getGeneratedImagePath(userData, guid, DEFAULT_STYLE)
+    );
+    if (alreadyGenerated.length > 0) {
+      const fallbackGuid =
+        alreadyGenerated[Math.floor(Math.random() * alreadyGenerated.length)];
+      const fallbackPath = getGeneratedImagePath(
+        userData,
+        fallbackGuid,
+        DEFAULT_STYLE
+      );
+      if (fallbackPath) {
+        try {
+          await setWallpaper(fallbackPath, { screen: "all" });
+          lastKnownGuid = fallbackGuid;
+          saveAllPreferences(userData, { ...prefs, lastWallpaperChange: now });
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    // If no generated wallpapers, do nothing
+    return;
   }
 }
 
