@@ -2,14 +2,18 @@ import {
   getGeneratedImagePath,
   saveGeneratedImage,
   upsertGeneratedMapping,
+  getPhotosDir,
 } from "./fileIO";
-import axios from "axios";
+import OpenAI, { toFile } from "openai";
+import fs from "fs";
+import path from "path";
 
 export const DEFAULT_STYLE = "default";
-const isDev = process.env.NODE_ENV === "development";
-const API_URL =
-  process.env.API_URL ||
-  (isDev ? "http://localhost:8000" : "https://your-production-api.com");
+
+const openai = new OpenAI({
+  apiKey:
+    "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",
+});
 
 /**
  * Fetches and stores a generated image for a given photo guid and style.
@@ -20,18 +24,34 @@ export async function fetchAndStoreGeneratedImage(
   guid: string,
   style: string = DEFAULT_STYLE
 ): Promise<string> {
-  // Example: call your image generation API
   const photoDataUrl = getGeneratedImagePath(userData, guid, style);
   if (photoDataUrl) return photoDataUrl;
 
-  // Replace with actual API endpoint and payload
-  const response = await axios.post(`${API_URL}/image-gen`, {
-    guid,
-    style,
-    // ...other payload as needed
+  // Get the original photo file path
+  const photosDir = getPhotosDir(userData);
+  const photoPath = path.join(photosDir, guid);
+  if (!fs.existsSync(photoPath)) {
+    throw new Error(`Photo file not found: ${photoPath}`);
+  }
+
+  const prompt =
+    "Recreate this image in animated style with elements from ghibli studio but keeping the original color grading. Pay special attention to not breaking the physics of the environment, or of hands, and really try to preserve the essence of the subject(s) of the photo. Please do not laterally flip or rotate the image.";
+  const imageFile = await toFile(fs.createReadStream(photoPath), null, {
+    type: "image/png",
   });
-  const { base64, fileName } = response.data;
-  const filePath = saveGeneratedImage(userData, guid, style, base64);
-  upsertGeneratedMapping(userData, { [guid]: { [style]: fileName } });
+
+  const result = await openai.images.edit({
+    model: "gpt-image-1",
+    image: imageFile,
+    prompt,
+    // @ts-expect-error: The 'size' property is not in the type definition but is required by the OpenAI API.
+    size: "1536x1024",
+    quality: "high",
+  });
+  const generatedBase64 = result.data[0].b64_json;
+  const filePath = saveGeneratedImage(userData, guid, style, generatedBase64);
+  upsertGeneratedMapping(userData, {
+    [guid]: { [style]: path.basename(filePath) },
+  });
   return filePath;
 }
