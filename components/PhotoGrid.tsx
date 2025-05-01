@@ -24,7 +24,7 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
             {onDelete && (
               <button
                 type="button"
-                className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 dark:bg-[#AAAAAA] backdrop-blur-[2px] rounded-full w-4 h-4 flex items-center justify-center shadow-sm transition-all focus:outline-none"
+                className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 dark:bg-[#AAAAAA] backdrop-blur-[2px] rounded-full p-0.5 w-3 h-3 flex items-center justify-center shadow-sm transition-all focus:outline-none"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(idx);
@@ -32,12 +32,33 @@ const PhotoGrid: React.FC<PhotoGridProps> = ({
                 tabIndex={-1}
                 aria-label={`Delete photo ${idx + 1}`}
               >
-                <span
-                  className="text-[16px] leading-none text-[#2F2F2F]"
-                  style={{ transform: "translateY(-1px)" }}
+                <svg
+                  width="9"
+                  height="9"
+                  viewBox="0 0 9 9"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
                 >
-                  &times;
-                </span>
+                  <line
+                    x1="1.5"
+                    y1="1.5"
+                    x2="7.5"
+                    y2="7.5"
+                    stroke="#2F2F2F"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="7.5"
+                    y1="1.5"
+                    x2="1.5"
+                    y2="7.5"
+                    stroke="#2F2F2F"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
             )}
             <img

@@ -119,8 +119,16 @@ const PhotoDetail: React.FC<PhotoDetailProps> = ({
             {wallpaper ? (
               <div className="text-xs p-2 text-black dark:text-[#DFDFDF] flex items-center gap-1">
                 Made with
-                <span role="img" aria-label="love" className="text-red-500">
-                  ♥
+                <span aria-label="love" className="text-red-500" role="img">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="inline align-text-bottom text-red-500"
+                  >
+                    <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.343l-6.828-6.829a4 4 0 010-5.656z" />
+                  </svg>
                 </span>
                 by Kettle
               </div>
