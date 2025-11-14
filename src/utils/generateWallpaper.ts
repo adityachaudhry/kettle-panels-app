@@ -11,8 +11,7 @@ import path from "path";
 export const DEFAULT_STYLE = "default";
 
 const openai = new OpenAI({
-  apiKey:
-    "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",
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
